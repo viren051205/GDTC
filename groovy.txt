@@ -1,0 +1,73 @@
+pipeline {
+    agent any
+    
+    environment {
+        TF_VERSION = "0.15.0"
+        AWS_REGION = "ap-south-1"
+        AWS_ACCESS_KEY_ID = credentials('AKI##++++BIX5KDI3')
+        AWS_SECRET_ACCESS_KEY = credentials('T$$$$wr####oC+++ayG')
+        ECR_REPO_NAME = "ecr_repo"
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Install Terraform') {
+            steps {
+                script {
+                    def tfHome = tool name: 'Terraform', type: 'hudson.plugins.terraform.TerraformInstallation'
+                    env.PATH = "${tfHome}:${env.PATH}"
+                }
+            }
+        }
+        
+        stage('Terraform Init') {
+            steps {
+                sh 'terraform init'
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t private .'
+            }
+        }
+        
+        stage('Tag Docker Image') {
+            steps {
+                sh "docker tag private ${ecr_repo}:1.0.0"
+            }
+        }
+        
+        stage('Login to ECR') {
+            steps {
+                withCredentials([string(credentialsId: 'aws_ecr', variable: 'docker_auth')]) {
+                    sh "docker login -u AWS -p ${docker_auth} https://764083026712.dkr.ecr.${AWS_REGION}.amazonaws.com"
+                }
+            }
+        }
+        
+        stage('Push to ECR') {
+            steps {
+                sh "docker push ${ecr_repo}:1.0.0"
+            }
+        }
+        
+        stage('Terraform Apply') {
+            steps {
+                sh 'terraform apply -auto-approve'
+            }
+        }
+    }
+    
+    post {
+        always {
+            // Clean up
+            sh 'terraform destroy -auto-approve'
+        }
+    }
+}

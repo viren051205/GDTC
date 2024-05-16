@@ -1,0 +1,41 @@
+import boto3
+import pymysql
+import os
+ # AWS credentials and region
+AWS_ACCESS_KEY_ID ='AKIA3DZX###$$$%KDI3'
+AWS_SECRET_ACCESS_KEY ='TN###$$upu++++zO7sgyeYayG'
+AWS_REGION = 'ap-south-1'
+
+# S3 details
+S3_BUCKET_NAME = 's3-apac-source-bucket'
+S3_OBJECT_KEY = 'data.txt'
+
+# RDS details
+RDS_HOST = 'database-1.cfcsg8qo4hjl.ap-south-1.rds.amazonaws.com'
+RDS_USER = 'admin'
+RDS_PASSWORD = 'Viren123'
+RDS_DB_NAME = 'database-1'
+
+def lambda_handler():
+    def read_from_s3():
+        s3 = boto3.client('s3', aws_access_key_id='AKI###DZXFX####***', aws_secret_access_key='T####$$$$$***6oC+zO7sgyBN7MeYayG', region_name='ap-south-1')
+        response = s3.get_object(Bucket='s3-apac-source-bucket', Key='data.txt')
+        data = response['Body'].read().decode('utf-8')
+    return data
+
+    def push_to_rds(data):
+        connection = pymysql.connect(host='database-1.cfcsg8qo4hjl.ap-south-1.rds.amazonaws.com',
+                                 user='admin',
+                                 password='Viren123',
+                                 database='database-1',
+                                 cursorclass='pymysql.cursors.DictCursor')
+
+        with connection.cursor() as cursor:
+            sql = "INSERT INTO r_table (r_data) VALUES (%s)"
+            cursor.execute(sql, (data,))
+            connection.commit()
+
+        connection.close()
+    data = read_from_s3()
+    push_to_rds(data)
+        

@@ -1,0 +1,43 @@
+
+resource "aws_lambda_function" "my_lambda" {
+  function_name = "my-lambda-function"
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "handler.handler"
+  runtime       = "python3.8"
+
+  image_uri = "764083026712.dkr.ecr.ap-south-1.amazonaws.com/private"
+
+  environment {
+    variables = {
+      AWS_REGION = "ap-south-1"
+      S3_BUCKET_NAME = "s3-apac-source-bucket"
+      RDS_HOST = aws_db_instance.my_db.address
+      RDS_USER = "admin"
+      RDS_PASSWORD = "Viren123"
+      RDS_DB_NAME = aws_db_instance.my_db
+    }
+  }
+}
+
+resource "aws_iam_role" "lambda_exec" {
+  name = "lambda-exec-role"
+  
+  assume_role_policy = jsonencode({
+    "Version" : "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "lambda.amazonaws.com"
+        },
+        "Action": "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_policy_attachment" "lambda_exec_policy_attachment" {
+  name       = "lambda-exec-policy-attachment"
+  roles      = [aws_iam_role.lambda_exec.name]
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
